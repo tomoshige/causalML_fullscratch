@@ -1,21 +1,35 @@
-# Classification And Regression Trees (CART)
-# This code is for classification that proposed by breiman (1984)
-# criterion function : "Gini index" or "entropy" can be selected
-# x : p-dim covariates 
-# y : outcome
-# usage :
-# x <- iris[,-5]
-# y <- iris$Species
-# clf_m <- DecisionTree(criterion="gini",min_node_size = 5, ratio_of_minority = 0.1)
-# clf_m$fit(x,y)
-# result <- clf_predict(x)
+##' ## Classification forest with default settings
+##' ranger(Species ~ ., data = iris)
+##'
+##' ## Prediction
+##' train.idx <- sample(nrow(iris), 2/3 * nrow(iris))
+##' iris.train <- iris[train.idx, ]
+##' iris.test <- iris[-train.idx, ]
+##' rg.iris <- ranger(Species ~ ., data = iris.train)
+##' pred.iris <- predict(rg.iris, data = iris.test)
+##' table(iris.test$Species, pred.iris$predictions)
+##' 
+##' ## Quantile regression forest
+##' rf <- ranger(mpg ~ ., mtcars[1:26, ], quantreg = TRUE)
+##' pred <- predict(rf, mtcars[27:32, ], type = "quantiles")
+##' pred$predictions
+##'
+##' ## Variable importance
+##' rg.iris <- ranger(Species ~ ., data = iris, importance = "impurity")
+##' rg.iris$variable.importance
+##'
+##' ## Survival forest
+##' require(survival)
+##' rg.veteran <- ranger(Surv(time, status) ~ ., data = veteran)
+##' plot(rg.veteran$unique.death.times, rg.veteran$survival[1,])
+##'
+##' ## Alternative interfaces (same results)
+##' ranger(dependent.variable.name = "Species", data = iris)
+##' ranger(y = iris[, 5], x = iris[, -5])
 
-# @param
-# @
-# @
-# @
-# @
 
+
+#Decision Tree
 require("R6")
 require("Rfast")
 
@@ -270,30 +284,19 @@ DecisionTree <- R6Class("DecisionTree",
     # self variables
     ###########################
     tree = NULL,
-    criterion = NULL, #criterion function that Gini index or entropy
-    max_depth = NULL, #maximum depth of the tree
-    min_node_size = NULL, #minimum number of samples that contain each terminal node that k < |#L| < 2k-1
-    alpha_regular = NULL, #alpha-regular parameter on Wager and Athey (2018)
-    mtry = NULL, #Number of covariates that uses for each split mtry ~ rpoisson(mtry)
-    random_state = NULL, # if we use mtry, prefer to set this random state parameter for reproducibility 
-    tree_analysis = NULL, # can not use (not-implemented)
-    feature_importances_ = NULL, # feature importance for single tree using Breiman-Kulter approach,
+    criterion = NULL,
+    max_depth = NULL,
+    random_state = NULL,
+    tree_analysis = NULL,
+    feature_importances_ = NULL,
     
     ############################
     #  functions
     ############################
-    initialize = function(criterion="gini",
-                          max_depth = NULL,
-                          min_node_size = NULL,
-                          alpha_regular = NULL,
-                          mtry = NULL,
-                          random_state = NULL){
+    initialize = function(criterion="gini",max_depth = NULL, random_state = NULL){
       self$tree = NULL
       self$criterion = criterion
       self$max_depth = max_depth
-      self$min_node_size = min_node_size
-      self$alpha_regular = alpha_regular
-      self$mtry = mtry
       self$random_state = random_state
       self$tree_analysis = TreeAnalysis$new()
     },
