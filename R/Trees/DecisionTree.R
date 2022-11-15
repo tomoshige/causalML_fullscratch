@@ -26,6 +26,9 @@ Node <- R6Class("Node",
     ###########################
     criterion = NULL,
     max_depth = NULL,
+    min_node_size = NULL,
+    alpha_regular = NULL,
+    mtry = NULL,
     random_state = NULL,
     depth = NULL,
     left = NULL,
@@ -44,93 +47,73 @@ Node <- R6Class("Node",
     
     
     #INITIALIZE
-    initialize = function(criterion,max_depth,random_state){
+    initialize = function(criterion,max_depth,min_node_size,alpha_regular,mtry,random_state){
       self$criterion = criterion
       self$max_depth = max_depth
+      self$min_node_size = min_node_size
+      self$alpha_regular = alpha_regular
+      self$mtry = mtry
       self$random_state = random_state
+      #depthとmin_node_sizeが指定された場合に以下の警告を実行
+      print("parameter depth and min_node_size are both detected. Prioritize DEPTH parameter")
     },
     
     # ------------ START SPLIT NODE -------------#
-    split_node = function(sample,target,depth,ini_num_classes){
+    split_node = function(sample,target,depth,unique_class){
+      #木の深さ、サンプル数、クラスに属するサンプル数を計算
       self$depth = depth
       self$num_samples = length(target)
-      
-      #ノード内の各クラスサンプル数を計算する
-      tmp = rep(0,length(ini_num_classes));j = 1
-      for(i in ini_num_classes){
-        tmp[j] = length(target[target == i])
-        j = j+1
+      self$num_classes = rep(0,length(unique_class))
+      for(j in 1:length(unique_class)){
+        self$num_classes[j] = length(target[target == unique_class[j]])
       }
-      self$num_classes = tmp #if there are more than 2 classes change here to below
       
-      
-      #親ノードのクラスを決定する
-      
-      #純度が1の場合はここで関数を終了する
+      #Gini index or Entropyが0の場合には、ここで関数を終了する
       if(length(unique(target))==1){ 
         self$label = target[1]
         self$impurity = self$criterion_func(target)
         return(self)
-      } 
+      }
       
-      #純度が1ではない場合は，以下で新たなsplit実行する
-      tmp <- table(target)
-      self$label = as.numeric(dimnames(tmp)$target[[which(tmp == max(tmp))[1]]])
-      self$impurity = self$criterion_func(target)
+      #depth < max_depthなら関数を終了する
+      if(depth > self$max_depth){ 
+        self$label = names(which.max(table(target)))
+        self$impurity = self$criterion_func(target)
+        return(self)
+      }
       
+      #Gini index or Entropyが0より大きい場合は以下のsplittingを実行する
       num_features = dim(sample)[2]
       self$info_gain = 0.0
       
-      #切る変数の選択(random-split)
-      repeat{
-        f = sample(seq(1,num_features,1),1)
-        uniq_feature = sort_unique(sample[,f])
-        if(length(uniq_feature)!=1){break}
-      }#split pointが計算できない場合は実行しない
-      split_points = (uniq_feature[-1]+uniq_feature[-length(uniq_feature)])/2
-      
-      for(threshold in split_points){
-        target_l = target[sample[,f] <= threshold]
-        target_r = target[sample[,f] > threshold]
-        val = self$calc_info_gain(target,target_l,target_r)
-        if(self$info_gain < val){
-          self$info_gain = val
-          self$feature = f
-          self$threshold = threshold
+      #切る変数の数を決定する(mtry)
+      if(is.null(self$random_state)!=TRUE){
+        set.seed(self$random_state)
+      }
+      if(is.null(mtry)==TRUE){
+        mtry = num_features
+      }else{
+        mtry = min(1+rpois(self$mtry),num_features)
+      }
+      #mtryで選択された数だけ{1,2,...,p}からランダムにサンプルをとる。
+      f_loop_order = sample(c(1:num_features),mtry,replace=FALSE)
+      for(f in f_loop_order){
+        uniq_feature = np.unique(sample[,f])
+        split_points = split_points = (uniq_feature[-1]+uniq_feature[-length(uniq_feature)])/2
+        #maximize impurity
+        for(threshold in split_points){
+          target_l = target[sample[,f] <= threshold]
+          target_r = target[sample[,f] > threshold]
+          val = self$calc_info_gain(target,target_l,target_r)
+          if(self$info_gain < val){
+            self$info_gain = val
+            self$feature = f
+            self$threshold =threshold
+          }
         }
       }
-      
       #どの変数で切っているか知りたければこれを実行．
       print(paste("feature:",self$feature,"at threshold:",self$threshold))
-      
-      
-      #切る変数の選択(rpart的な全変数探索)
-      #if(!is.null(self$random_state)){
-      #  set.seed(self$random_state)
-      #}
-      #f_loop_order = sample(c(1:dim(sample)[2]),dim(sample)[2],replace=FALSE)
-      #for(f in f_loop_order){
-      #  uniq_feature = np.unique(sample[,f])
-      #  split_points = (uniq_feature[-1]+uniq_feature[-1])
-        
-        #探索
-      #  for(threshold in split_points){
-      #    target_l = target[sample[,f] <= threshold]
-      #    target_r = target[sample[,f] > threshold]
-      #    val = self$calc_info_gain(target,target_l,target_r)
-      #    if(self$info_gain < val){
-      #      self$info_gain = val
-      #      self$feature = f
-      #      self$threshold =threshold
-      #   }
-      #}
-        
-      if(self$info_gain==0.0){
-        return(self)
-      }
-      if(depth == self$max_depth){
-        return(self)
-      }
       
       #再帰分割(recursive partition)を実行する
         #Left node:
@@ -145,7 +128,7 @@ Node <- R6Class("Node",
         target_r = target[sample[,self$feature] > self$threshold]
         self$right = Node$new(self$criterion,self$max_depth,random_state=random_state)
         self$right$split_node(sample_r,target_r,depth+1,ini_num_classes)
-    }, 
+    },
     # ---------- END SPLIT NODE FUNCTION ----------- #
     
     #ノード内の純度を計算する関数
@@ -300,7 +283,12 @@ DecisionTree <- R6Class("DecisionTree",
     
     #当てはめ結果を返す関数
     fit = function(sample,target){
-      self$tree = Node$new(self$criterion,self$max_depth,self$random_state)
+      self$tree = Node$new(self$criterion,
+                           self$max_depth,
+                           self$min_node_size,
+                           self$alpha_regular,
+                           self$mtry = mtry,
+                           self$random_state)
       self$tree$split_node(sample,target,0,unique(target))
       self$feature_importances_ = self$tree_analysis$get_feature_importances(self$tree,dim(sample)[2])
     },
