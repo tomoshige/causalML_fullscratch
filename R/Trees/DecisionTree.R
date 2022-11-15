@@ -40,6 +40,7 @@ Node <- R6Class("Node",
     info_gain = NULL,
     num_samples = NULL,
     num_classes = NULL,
+    terminal = NULL,
     
     ############################
     #  functions
@@ -70,8 +71,11 @@ Node <- R6Class("Node",
       
       #Gini index or Entropyが0の場合には、ここで関数を終了する
       if(length(unique(target))==1){ 
-        self$label = target[1]
+        self$label = names(which.max(table(target)))
         self$impurity = self$criterion_func(target)
+        self$terminal = TRUE
+        print(self$depth)
+        print(self$label)
         return(self)
       }
       
@@ -79,10 +83,16 @@ Node <- R6Class("Node",
       if(depth > self$max_depth){ 
         self$label = names(which.max(table(target)))
         self$impurity = self$criterion_func(target)
+        self$terminal = TRUE
+        print(self$depth)
+        print(self$label)
         return(self)
       }
       
-      #Gini index or Entropyが0より大きい場合は以下のsplittingを実行する
+      ##############################################################
+      #splittingの終了条件が満たされなかったのでsplittingを実行する#
+      ##############################################################
+      self$terminal = FALSE
       num_features = dim(sample)[2]
       self$info_gain = 0.0
       
@@ -90,7 +100,7 @@ Node <- R6Class("Node",
       if(is.null(self$random_state)!=TRUE){
         set.seed(self$random_state)
       }
-      if(is.null(mtry)==TRUE){
+      if(is.null(self$mtry)==TRUE){
         mtry = num_features
       }else{
         mtry = min(1+rpois(self$mtry),num_features)
@@ -98,8 +108,8 @@ Node <- R6Class("Node",
       #mtryで選択された数だけ{1,2,...,p}からランダムにサンプルをとる。
       f_loop_order = sample(c(1:num_features),mtry,replace=FALSE)
       for(f in f_loop_order){
-        uniq_feature = np.unique(sample[,f])
-        split_points = split_points = (uniq_feature[-1]+uniq_feature[-length(uniq_feature)])/2
+        uniq_feature = unique(sample[,f])
+        split_points = (uniq_feature[-1]+uniq_feature[-length(uniq_feature)])/2
         #maximize impurity
         for(threshold in split_points){
           target_l = target[sample[,f] <= threshold]
@@ -119,15 +129,25 @@ Node <- R6Class("Node",
         #Left node:
         sample_l = sample[sample[,self$feature]<=self$threshold,]
         target_l = target[sample[,self$feature]<=self$threshold]
-        self$left = Node$new(self$criterion,self$max_depth,random_state=random_state)
-        self$left$split_node(sample_l,target_l,depth+1,ini_num_classes)
+        self$left = Node$new(self$criterion,
+                             self$max_depth,
+                             self$min_node_size,
+                             self$alpha_regular,
+                             self$mtry,
+                             self$random_state)
+        self$left$split_node(sample_l,target_l,depth+1,unique_class)
         
         
         #Right node:
         sample_r = sample[sample[,self$feature] > self$threshold,]
         target_r = target[sample[,self$feature] > self$threshold]
-        self$right = Node$new(self$criterion,self$max_depth,random_state=random_state)
-        self$right$split_node(sample_r,target_r,depth+1,ini_num_classes)
+        self$right = Node$new(self$criterion,
+                              self$max_depth,
+                              self$min_node_size,
+                              self$alpha_regular,
+                              self$mtry,
+                              self$random_state)
+        self$right$split_node(sample_r,target_r,depth+1,unique_class)
     },
     # ---------- END SPLIT NODE FUNCTION ----------- #
     
@@ -180,7 +200,7 @@ Node <- R6Class("Node",
     # -------- START PREDICT FUNCTION ---------#
     
     predict = function(sample){
-      if(is.null(self$feature) | self$depth == self$max_depth){
+      if(self$terminal){
         return(self$label)
       }else{
         if(sample[self$feature] <= self$threshold){
@@ -287,7 +307,7 @@ DecisionTree <- R6Class("DecisionTree",
                            self$max_depth,
                            self$min_node_size,
                            self$alpha_regular,
-                           self$mtry = mtry,
+                           self$mtry,
                            self$random_state)
       self$tree$split_node(sample,target,0,unique(target))
       self$feature_importances_ = self$tree_analysis$get_feature_importances(self$tree,dim(sample)[2])
