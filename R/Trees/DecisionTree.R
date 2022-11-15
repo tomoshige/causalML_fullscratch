@@ -1,20 +1,43 @@
 # Classification And Regression Trees (CART)
 # This code is for classification that proposed by breiman (1984)
-# criterion function : "Gini index" or "entropy" can be selected
+# Written by Tomoshige Nakamura, Keio Univ.
+
+# [Example]
 # x : p-dim covariates 
 # y : outcome
 # usage :
 # x <- iris[,-5]
 # y <- iris$Species
-# clf_m <- DecisionTree(criterion="gini",min_node_size = 5, ratio_of_minority = 0.1)
+# clf_m <- DecisionTree$new(criterion="gini",
+#                          max_depth = 4,
+#                          min_node_size = NULL,
+#                          alpha_regular = NULL,
+#                          mtry = NULL,
+#                          random_state = NULL)
 # clf_m$fit(x,y)
-# result <- clf_predict(x)
+# result <- clf_m$predict(x)
+# table(y,result)
+#             result
+# y            setosa versicolor virginica
+# setosa         50          0         0
+# versicolor      0         49         1
+# virginica       0          1        49
 
-# @param
-# @
-# @
-# @
-# @
+
+# @input param
+# @criterion : Gini index or Entropyを選択可能
+# @max_depth : 木の深さの最大値
+# @min_node_size : terminal nodeのサンプル数 k < |#L| < 2k - 1 
+#                  (max_depthが指定された場合はmax_depthを優先処理する)
+# @alpha_regular : 分割における#C1, #C2 > 100*\alpha #P
+# @mtry : 分割の際に使用する変数の数。指定すると平均mtryのpoissonによって指定される。
+# @random_state : mtryを指定した場合の乱数設定
+
+#[未完成の部分について]
+# gini-index, entropyの挙動を個別に確認していない
+# min-node-size, alpha_regularの関数は未実装
+# mtryの挙動は未確認
+
 
 require("R6")
 require("Rfast")
