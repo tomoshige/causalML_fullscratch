@@ -37,6 +37,8 @@
 # gini-index, entropyの挙動を個別に確認していない
 # min-node-size, alpha_regularの関数は未実装
 # mtryの挙動は未確認
+# Variable importanceも未実装
+# plot.treeも実装できたらいいなとは思っているが、猫の手ないと無理。
 
 
 require("R6")
