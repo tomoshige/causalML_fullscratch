@@ -80,8 +80,6 @@ Node <- R6Class("Node",
       self$alpha_regular = alpha_regular
       self$mtry = mtry
       self$random_state = random_state
-      #depthとmin_node_sizeが指定された場合に以下の警告を実行
-      print("parameter depth and min_node_size are both detected. Prioritize DEPTH parameter")
     },
     
     # ------------ START SPLIT NODE -------------#
@@ -132,6 +130,9 @@ Node <- R6Class("Node",
       }
       #mtryで選択された数だけ{1,2,...,p}からランダムにサンプルをとる。
       f_loop_order = sample(c(1:num_features),mtry,replace=FALSE)
+      n_alpha = 
+      
+      
       for(f in f_loop_order){
         uniq_feature = unique(sample[,f])
         split_points = (uniq_feature[-1]+uniq_feature[-length(uniq_feature)])/2
