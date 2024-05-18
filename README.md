@@ -6,10 +6,13 @@ causal inferenceで使用する用途で開発しています。
 # 開発済み
 - Regression Trees
 - Regression Forests
-- Multivariate additive regression splines
+- Multivariate additive regression splines (Friedman original)
+- Causal Forests (R-learner based gradient trees)
 
 ## 開発予定
-- causal forest (R-learner framework)
+- MARS (preventing overfitting)
+- MARS (cross-fitting)
+- MARS (probability estimation)
 - LightGBM with Causal Loss
 - XgBoost with Causal Loss
 - CausalMARS
