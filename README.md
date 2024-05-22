@@ -8,6 +8,7 @@ causal inferenceで使用する用途で開発しています。
 - Regression Forests
 - Multivariate additive regression splines (Friedman original)
 - Causal Forests (R-learner based gradient trees)
+- Outer-product gradient methods (sufficient dimension reduction)
 
 ## 開発予定
 - MARS (preventing overfitting)
