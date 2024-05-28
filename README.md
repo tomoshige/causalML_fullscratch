@@ -21,4 +21,5 @@ causal inferenceで使用する用途で開発しています。
 - dragon-net
 - causal StoNet (Fang and Liang, 2024)
 - BCAUSS
+- Causal SurvivalNet
 - Causal Kormogorov-Smilnov Network
