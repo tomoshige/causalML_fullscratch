@@ -1,7 +1,7 @@
 # Full scratch tree and forest, tree boosting, deep learning algorithm for academic research
 
 このページは、Treeやランダムフォレストアルゴリズム, boosting, neural networkをPythonでフルスクラッチ開発したコードをおいています。
-causal inferenceで使用する用途で開発しています。
+causal inferenceで使用する用途で開発しています。Deep Learning系はフルスクラッチも開発しますが、PyTorchを利用しても開発予定です。
 
 # 開発済み
 - Regression Trees
